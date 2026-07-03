@@ -252,7 +252,7 @@ def widok_dodawanie_zdarzen(session, user: User):
 
         st.markdown("#### Wszystkie zdarzenia")
         wszystkie = logic.wszystkie_dodane_zdarzenia(session)
-        pozostale = [e for e in wszystkie if e.dotyczy_user_id != nastepny.id]
+        pozostale = [e for e in wszystkie if e.dotyczy_user_id not in (nastepny.id, user.id)]
         if pozostale:
             for e in pozostale:
                 cel = e.dotyczy.nick if e.dotyczy else "OGOLNE"
@@ -280,7 +280,7 @@ def widok_dodawanie_zdarzen(session, user: User):
     st.markdown("#### Zdarzenia dodane do tej pory przez wszystkich (na żywo)")
     if HAS_AUTOREFRESH:
         st_autorefresh(interval=6000, key="dodawanie_refresh")
-    zdarzenia = logic.wszystkie_dodane_zdarzenia(session)
+    zdarzenia = [e for e in logic.wszystkie_dodane_zdarzenia(session) if e.dotyczy_user_id != user.id]
     if not zdarzenia:
         st.write("Jeszcze nic nie dodano.")
     for e in zdarzenia:
@@ -501,7 +501,7 @@ def panel_kursy_rozliczenia(session, user: User):
     )
 
     with tab1:
-        do_wyceny = logic.zdarzenia_do_wyceny(session)
+        do_wyceny = [e for e in logic.zdarzenia_do_wyceny(session) if e.dotyczy_user_id != user.id]
         if not do_wyceny:
             st.success("Wszystkie zdarzenia mają już kurs.")
         for e in do_wyceny:
@@ -526,7 +526,9 @@ def panel_kursy_rozliczenia(session, user: User):
 
         st.divider()
         st.markdown("#### Zmiana kursów już wystawionych")
-        wycenione = session.query(Event).filter_by(status=EVENT_OFERTA_OTWARTA, usuniete=False).all()
+        wycenione = session.query(Event).filter_by(status=EVENT_OFERTA_OTWARTA, usuniete=False).filter(
+            (Event.dotyczy_user_id != user.id) | (Event.dotyczy_user_id.is_(None))
+        ).all()
         for e in wycenione:
             cel = e.dotyczy.nick if e.dotyczy else "🌍 OGÓLNE"
             with st.expander(f"[{cel}] {e.opis}"):
@@ -551,6 +553,8 @@ def panel_kursy_rozliczenia(session, user: User):
     with tab2:
         aktywne = session.query(Event).filter(
             Event.status.in_([EVENT_OFERTA_OTWARTA]), Event.usuniete == False
+        ).filter(
+            (Event.dotyczy_user_id != user.id) | (Event.dotyczy_user_id.is_(None))
         ).all()
         if not aktywne:
             st.write("Brak zdarzeń czekających na rozstrzygnięcie.")
@@ -573,6 +577,8 @@ def panel_kursy_rozliczenia(session, user: User):
         rozstrzygniete = session.query(Event).filter(
             Event.status.in_([EVENT_ROZSTRZYGNIETE_TAK, EVENT_ROZSTRZYGNIETE_NIE, EVENT_UNIEWAZNIONE]),
             Event.usuniete == False
+        ).filter(
+            (Event.dotyczy_user_id != user.id) | (Event.dotyczy_user_id.is_(None))
         ).all()
         for e in rozstrzygniete:
             cel = e.dotyczy.nick if e.dotyczy else "🌍 OGÓLNE"
@@ -586,7 +592,7 @@ def panel_kursy_rozliczenia(session, user: User):
         st.caption("Usuniecie zdarzenia jest ostateczne. Jesli ktos juz na nim postawil, "
                    "zaklad zostanie automatycznie potraktowany jak uniewazniony (zwrot stawki na tej nodze). "
                    "Autor dostanie powiadomienie przy nastepnym logowaniu.")
-        wszystkie = logic.wszystkie_dodane_zdarzenia(session)
+        wszystkie = [e for e in logic.wszystkie_dodane_zdarzenia(session) if e.dotyczy_user_id != user.id]
         if not wszystkie:
             st.write("Brak zdarzen.")
         for e in wszystkie:
