@@ -120,6 +120,12 @@ def inject_css():
         font-size: 0.85rem;
         font-weight: 700;
     }
+    .sb-autor {
+        color: #6b7280;
+        font-size: 0.75rem;
+        margin-top: 6px;
+        margin-bottom: 10px;
+    }
     .sb-lb-card {
         display: flex;
         flex-direction: column;
@@ -296,6 +302,7 @@ def _badge_i_tytul(e):
     else:
         st.markdown("<span class='sb-badge sb-badge-general'>ZDARZENIE OGOLNE</span>", unsafe_allow_html=True)
     st.markdown(f"<div class='sb-title'>{e.opis}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sb-autor'>dodal: {e.autor.nick}</div>", unsafe_allow_html=True)
 
 
 def widok_oferta(session, user: User):
@@ -338,39 +345,12 @@ def _widok_budowania_kuponu(session, user: User, zdarzenia):
         st.write("Brak aktywnych zdarzen w ofercie (wszystko juz rozstrzygniete).")
         return
 
-    kolumny = st.columns(2)
-    for i, e in enumerate(aktywne):
-        wybrany = st.session_state["kupon_nogi"].get(e.id)
-        with kolumny[i % 2]:
-            with st.container(border=True):
-                _badge_i_tytul(e)
-                if e.typ_rynku == RYNEK_TAK_NIE:
-                    c1, c2 = st.columns(2)
-                else:
-                    c1, c2 = st.columns([1, 1])
-                if c1.button(f"TAK @ {e.kurs_tak}", key=f"tak_{e.id}",
-                             type="primary" if wybrany == "tak" else "secondary"):
-                    if wybrany == "tak":
-                        st.session_state["kupon_nogi"].pop(e.id, None)
-                    else:
-                        st.session_state["kupon_nogi"][e.id] = "tak"
-                    st.rerun()
-                if e.typ_rynku == RYNEK_TAK_NIE:
-                    if c2.button(f"NIE @ {e.kurs_nie}", key=f"nie_{e.id}",
-                                 type="primary" if wybrany == "nie" else "secondary"):
-                        if wybrany == "nie":
-                            st.session_state["kupon_nogi"].pop(e.id, None)
-                        else:
-                            st.session_state["kupon_nogi"][e.id] = "nie"
-                        st.rerun()
-
-    st.divider()
     nogi = st.session_state["kupon_nogi"]
+    by_id = {e.id: e for e in aktywne}
     if nogi:
         with st.container(border=True):
             st.markdown(f"<span class='sb-badge'>KUPON AKO - {len(nogi)} ZDARZEN</span>", unsafe_allow_html=True)
             kurs_total = Decimal("1.0")
-            by_id = {e.id: e for e in aktywne}
             for eid, typ in list(nogi.items()):
                 e = by_id.get(eid)
                 if e is None:
@@ -396,8 +376,36 @@ def _widok_budowania_kuponu(session, user: User, zdarzenia):
                     st.rerun()
                 except BladLogiki as err:
                     st.error(str(err))
+        st.divider()
     else:
         st.caption("Kliknij TAK/NIE przy zdarzeniach, zeby dodac je do kuponu.")
+        st.divider()
+
+    kolumny = st.columns(2)
+    for i, e in enumerate(aktywne):
+        wybrany = st.session_state["kupon_nogi"].get(e.id)
+        with kolumny[i % 2]:
+            with st.container(border=True):
+                _badge_i_tytul(e)
+                if e.typ_rynku == RYNEK_TAK_NIE:
+                    c1, c2 = st.columns(2)
+                else:
+                    c1, c2 = st.columns([1, 1])
+                if c1.button(f"TAK @ {e.kurs_tak}", key=f"tak_{e.id}",
+                             type="primary" if wybrany == "tak" else "secondary"):
+                    if wybrany == "tak":
+                        st.session_state["kupon_nogi"].pop(e.id, None)
+                    else:
+                        st.session_state["kupon_nogi"][e.id] = "tak"
+                    st.rerun()
+                if e.typ_rynku == RYNEK_TAK_NIE:
+                    if c2.button(f"NIE @ {e.kurs_nie}", key=f"nie_{e.id}",
+                                 type="primary" if wybrany == "nie" else "secondary"):
+                        if wybrany == "nie":
+                            st.session_state["kupon_nogi"].pop(e.id, None)
+                        else:
+                            st.session_state["kupon_nogi"][e.id] = "nie"
+                        st.rerun()
 
 
 # ---------------- Moje kupony ----------------
